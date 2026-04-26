@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje hodiny - Pracovný výkaz</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f2f2f7; padding: 20px; margin: 0; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .day-badge { font-size: 24px; font-weight: 600; margin-bottom: 5px; }
+        .date-badge { color: #666; font-size: 14px; margin-bottom: 15px; }
+        .name-row { background: #f0f8ff; padding: 12px; border-radius: 12px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .name-row label { font-weight: 700; color: #007aff; }
+        .name-row input { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 10px; font-size: 16px; }
+        .saved-info { background: #e8f5e9; padding: 10px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; color: #2e7d32; }
+        .btn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .btn { background: #007aff; border: none; color: white; padding: 14px 0; border-radius: 14px; font-size: 14px; font-weight: 500; cursor: pointer; }
+        .btn .big-time { font-size: 20px; font-weight: 800; display: block; }
+        .btn .small-desc { font-size: 12px; font-weight: normal; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: #007aff; }
+        .btn-success { background: #34c759; }
+        .btn-warning { background: #ff9f0a; }
+        .btn-danger { background: #ff3b30; }
+        .btn-print { background: #636366; }
+        .btn-purple { background: #af52de; }
+        .manual-area { margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e5ea; }
+        .manual-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .manual-row label { width: 80px; font-weight: 700; font-size: 16px; color: #cc0000; }
+        .manual-row .big-value { font-size: 20px; font-weight: 800; color: #cc0000; background: #fff0f0; padding: 6px 12px; border-radius: 12px; cursor: pointer; }
+        input { flex: 1; padding: 10px; border: 1px solid #c6c6c8; border-radius: 12px; font-size: 16px; }
+        .small-text { font-size: 12px; color: #666; margin-top: 8px; }
+        .week-number { background: #e9ecef; padding: 8px 12px; border-radius: 10px; text-align: center; margin-bottom: 15px; font-weight: 500; }
+        .records-list { max-height: 300px; overflow-y: auto; margin-top: 15px; }
+        .record-item { background: #f8f9fa; padding: 10px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .record-date { font-weight: 600; min-width: 100px; }
+        .record-data { font-size: 13px; color: #333; flex: 1; }
+        .record-actions button { margin-left: 5px; padding: 5px 10px; font-size: 12px; border-radius: 8px; border: none; color: white; cursor: pointer; }
+        .edit-btn { background: #ff9f0a; }
+        .delete-btn { background: #ff3b30; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 20px; padding: 20px; max-width: 90%; width: 500px; max-height: 80%; overflow-y: auto; }
+        .modal-content h3 { margin-top: 0; }
+        .week-day-item { border-bottom: 1px solid #e5e5ea; padding: 12px 0; }
+        .week-day-title { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+        .week-day-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .small-btn { padding: 6px 12px; font-size: 12px; border-radius: 10px; border: none; color: white; cursor: pointer; }
+        .week-manual-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+        .week-manual-row input { width: auto; flex: 1; min-width: 80px; padding: 6px; }
+        @media print { body { background: white; padding: 0; margin: 0; } .no-print { display: none; } .container { max-width: 100%; } .card { box-shadow: none; padding: 0; margin: 0; } }
+        .print-report { font-family: 'Courier New', Courier, monospace; width: 100%; padding: 20px; }
+        .print-report table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .print-report th, .print-report td { border: 1px solid black; padding: 8px; text-align: center; font-size: 12px; }
+        .print-report th { background: #e0e0e0; font-weight: bold; }
+        .print-report tr:nth-child(even) { background: #f5f5f5; }
+        .print-report .header { text-align: center; margin-bottom: 20px; }
+        .print-report .title { font-size: 20px; font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card no-print">
+        <div class="day-badge" id="dayName">Dnes</div>
+        <div class="date-badge" id="dateStr"></div>
+        <div class="name-row">
+            <label>👤 Meno pracovníka:</label>
+            <input type="text" id="workerName" placeholder="Zadajte svoje meno" value="Radovan Topol">
+        </div>
+        <div class="week-number" id="weekDisplay">Kalendárny týždeň: --</div>
+        <div class="saved-info" id="savedInfo">⏳ Zatiaľ žiadny záznam na dnes</div>
+
+        <div class="btn-grid">
+            <button class="btn btn-primary" id="standardBtn1"><span class="big-time">🕕 06:00 – 18:00</span><span class="small-desc">Pauza 45min = 11:15</span></button>
+            <button class="btn btn-primary" id="standardBtn2"><span class="big-time">🕕 06:00 – 17:45</span><span class="small-desc">Pauza 45min = 11:00</span></button>
+            <button class="btn btn-primary" id="standardBtn3"><span class="big-time">🕕 06:00 – 16:00</span><span class="small-desc">Pauza 45min = 9:15</span></button>
+            <button class="btn btn-primary" id="standardBtn4"><span class="big-time">🕕 06:00 – 16:30</span><span class="small-desc">Pauza 45min = 9:45</span></button>
+        </div>
+
+        <div class="manual-area">
+            <div class="manual-row"><label>🔴 PRÍCHOD:</label><span class="big-value" id="displayStart">06:00</span><input type="time" id="manualStart" value="06:00" style="display:none;"></div>
+            <div class="manual-row"><label>🔴 ODCHOD:</label><span class="big-value" id="displayEnd">18:00</span><input type="time" id="manualEnd" value="18:00" style="display:none;"></div>
+            <div class="manual-row"><label>Pauza (h):</label><input type="number" id="manualBreak" step="0.25" value="0.75"></div>
+            <button class="btn btn-success" id="manualSaveBtn" style="width:100%; margin-top:10px;">📝 Uložiť manuálne</button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+            <button class="btn btn-purple" id="fillWeekBtn" style="flex:1;">📅 Doplniť celý týždeň</button>
+            <button class="btn btn-warning" id="showRecordsBtn" style="flex:1;">📋 Spravovať dni</button>
+        </div>
+        <button class="btn btn-primary" id="reportBtn" style="margin-top:10px; width:100%;">📄 Týždenný report</button>
+        <button class="btn btn-print" id="printBtn" style="margin-top:10px; width:100%;">🖨️ Vytlačiť</button>
+
+        <div id="recordsList" class="records-list" style="display:none;"></div>
+        <div id="reportDisplay" style="margin-top:20px;"></div>
+    </div>
+</div>
+
+<!-- Modal na úpravu dňa -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3>Upraviť deň</h3>
+        <label>Dátum:</label><input type="date" id="editDate" readonly style="background:#f0f0f0;">
+        <label>Príchod:</label><input type="time" id="editStart">
+        <label>Odchod:</label><input type="time" id="editEnd">
+        <label>Pauza (h):</label><input type="number" id="editBreak" step="0.25">
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button id="saveEditBtn" class="btn btn-success" style="flex:1;">Uložiť</button>
+            <button id="closeModalBtn" class="btn btn-danger" style="flex:1;">Zrušiť</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal na doplnenie týždňa -->
+<div id="weekModal" class="modal">
+    <div class="modal-content">
+        <h3>📅 Doplniť celý týždeň</h3>
+        <div id="weekDaysContainer"></div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button id="saveAllWeekBtn" class="btn btn-success" style="flex:1;">💾 Uložiť celý týždeň</button>
+            <button id="closeWeekModalBtn" class="btn btn-danger" style="flex:1;">Zrušiť</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    loadWorkerName();
+    updateHeaderDate();
+    updateTodayUI();
+
+    function loadWorkerName() { let savedName = localStorage.getItem("workerName"); if (savedName) document.getElementById("workerName").value = savedName; }
+    function saveWorkerName() { localStorage.setItem("workerName", document.getElementById("workerName").value); }
+    document.getElementById("workerName").addEventListener("input", saveWorkerName);
+    
+    function loadData() { return JSON.parse(localStorage.getItem("workHours") || "{}"); }
+    function saveData(data) { localStorage.setItem("workHours", JSON.stringify(data)); }
+    
+    function getTodayKey() { return new Date().toISOString().slice(0, 10); }
+    
+    function saveRecord(dayKey, start, end, breakHours, netHours) {
+        let data = loadData();
+        data[dayKey] = { start: start, end: end, break: breakHours, net: netHours, gross: netHours + breakHours };
+        saveData(data);
+        updateTodayUI();
+        if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
+    }
+    
+    function saveStandard1() { let today = getTodayKey(); let net = 11.25; saveRecord(today, "06:00", "18:00", 0.75, net); }
+    function saveStandard2() { let today = getTodayKey(); let net = 11.00; saveRecord(today, "06:00", "17:45", 0.75, net); }
+    function saveStandard3() { let today = getTodayKey(); let net = 9.25; saveRecord(today, "06:00", "16:00", 0.75, net); }
+    function saveStandard4() { let today = getTodayKey(); let net = 9.75; saveRecord(today, "06:00", "16:30", 0.75, net); }
+    
+    function saveManual() {
+        let start = document.getElementById("manualStart").value;
+        let end = document.getElementById("manualEnd").value;
+        let breakHours = parseFloat(document.getElementById("manualBreak").value) || 0;
+        let startH = parseInt(start.split(":")[0]), startM = parseInt(start.split(":")[1]);
+        let endH = parseInt(end.split(":")[0]), endM = parseInt(end.split(":")[1]);
+        let gross = (endH + endM/60) - (startH + startM/60);
+        if (gross < 0) gross += 24;
+        let net = gross - breakHours;
+        if (net < 0) net = 0;
+        saveRecord(getTodayKey(), start, end, breakHours, net);
+    }
+    
+    function updateTodayUI() {
+        let today = getTodayKey();
+        let record = loadData()[today];
+        let div = document.getElementById("savedInfo");
+        if (record) {
+            div.innerHTML = `✅ Uložené na dnes: Príchod ${record.start}, Odchod ${record.end}, Pauza ${record.break} h → Čistý čas ${record.net.toFixed(2)} h`;
+            document.getElementById("displayStart").innerText = record.start;
+            document.getElementById("displayEnd").innerText = record.end;
+            document.getElementById("manualStart").value = record.start;
+            document.getElementById("manualEnd").value = record.end;
+            document.getElementById("manualBreak").value = record.break;
+        } else { div.innerHTML = `⏳ Zatiaľ žiadny záznam na dnes`; }
+    }
+    
+    function updateHeaderDate() {
+        let today = new Date();
+        document.getElementById("dayName").innerText = today.toLocaleDateString('sk-SK', { weekday: 'long' });
+        document.getElementById("dateStr").innerText = today.toLocaleDateString('sk-SK', { year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById("weekDisplay").innerHTML = `Kalendárny týždeň: ${getWeekNumber()}`;
+    }
+    
+    function getWeekNumber() {
+        let now = new Date();
+        let start = new Date(now.getFullYear(), 0, 1);
+        return Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
+    }
+    
+    function getCurrentWeekDates() {
+        let today = new Date();
+        let currentDay = today.getDay();
+        let diffToMonday = (currentDay === 0 ? -6 : 1 - currentDay);
+        let monday = new Date(today);
+        monday.setDate(today.getDate() + diffToMonday);
+        let weekDays = [];
+        let dayNames = ["Pondelok", "Utorok", "Streda", "Štvrtok", "Piatok", "Sobota", "Nedeľa"];
+        for (let i = 0; i < 7; i++) {
+            let d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            weekDays.push({
+                key: d.toISOString().slice(0, 10),
+                name: dayNames[i],
+                date: d.getDate() + "." + (d.getMonth() + 1) + "."
+            });
+        }
+        return weekDays;
+    }
+    
+    function openWeekModal() {
+        let weekDays = getCurrentWeekDates();
+        let data = loadData();
+        let container = document.getElementById("weekDaysContainer");
+        let html = "";
+        for (let day of weekDays) {
+            let record = data[day.key];
+            let currentStart = record ? record.start : "06:00";
+            let currentEnd = record ? record.end : "18:00";
+            let currentBreak = record ? record.break : 0.75;
+            html += `<div class="week-day-item" data-key="${day.key}">
+                        <div class="week-day-title">${day.name} (${day.date})</div>
+                        <div class="week-day-buttons">
+                            <button class="small-btn btn-primary" onclick="setDayPreset('${day.key}', '06:00', '18:00', 0.75, 11.25)">06:00–18:00 (11:15)</button>
+                            <button class="small-btn btn-primary" onclick="setDayPreset('${day.key}', '06:00', '17:45', 0.75, 11.00)">06:00–17:45 (11:00)</button>
+                            <button class="small-btn btn-primary" onclick="setDayPreset('${day.key}', '06:00', '16:00', 0.75, 9.25)">06:00–16:00 (9:15)</button>
+                            <button class="small-btn btn-primary" onclick="setDayPreset('${day.key}', '06:00', '16:30', 0.75, 9.75)">06:00–16:30 (9:45)</button>
+                        </div>
+                        <div class="week-manual-row">
+                            <input type="time" id="weekStart_${day.key}" value="${currentStart}" style="width:90px;">
+                            <span>→</span>
+                            <input type="time" id="weekEnd_${day.key}" value="${currentEnd}" style="width:90px;">
+                            <input type="number" id="weekBreak_${day.key}" step="0.25" value="${currentBreak}" style="width:70px;" placeholder="pauza">
+                            <button class="small-btn btn-success" onclick="saveDayFromWeek('${day.key}')">Uložiť</button>
+                        </div>
+                    </div>`;
+        }
+        container.innerHTML = html;
+        document.getElementById("weekModal").style.display = "flex";
+    }
+    
+    function setDayPreset(key, start, end, breakHours, net) {
+        document.getElementById(`weekStart_${key}`).value = start;
+        document.getElementById(`weekEnd_${key}`).value = end;
+        document.getElementById(`weekBreak_${key}`).value = breakHours;
+        saveDayFromWeek(key);
+    }
+    
+    function saveDayFromWeek(key) {
+        let start = document.getElementById(`weekStart_${key}`).value;
+        let end = document.getElementById(`weekEnd_${key}`).value;
+        let breakHours = parseFloat(document.getElementById(`weekBreak_${key}`).value) || 0;
+        let startH = parseInt(start.split(":")[0]), startM = parseInt(start.split(":")[1]);
+        let endH = parseInt(end.split(":")[0]), endM = parseInt(end.split(":")[1]);
+        let gross = (endH + endM/60) - (startH + startM/60);
+        if (gross < 0) gross += 24;
+        let net = gross - breakHours;
+        if (net < 0) net = 0;
+        saveRecord(key, start, end, breakHours, net);
+        alert(`Záznam pre ${key} bol uložený.`);
+    }
+    
+    function saveAllWeek() {
+        let weekDays = getCurrentWeekDates();
+        for (let day of weekDays) {
+            let start = document.getElementById(`weekStart_${day.key}`).value;
+            let end = document.getElementById(`weekEnd_${day.key}`).value;
+            let breakHours = parseFloat(document.getElementById(`weekBreak_${day.key}`).value) || 0;
+            let startH = parseInt(start.split(":")[0]), startM = parseInt(start.split(":")[1]);
+            let endH = parseInt(end.split(":")[0]), endM = parseInt(end.split(":")[1]);
+            let gross = (endH + endM/60) - (startH + startM/60);
+            if (gross < 0) gross += 24;
+            let net = gross - breakHours;
+            if (net < 0) net = 0;
+            let data = loadData();
+            data[day.key] = { start: start, end: end, break: breakHours, net: net, gross: gross };
+            saveData(data);
+        }
+        updateTodayUI();
+        document.getElementById("weekModal").style.display = "none";
+        alert("Celý týždeň bol uložený.");
+    }
+    
+    function showRecordsList() {
+        let data = loadData();
+        let listDiv = document.getElementById("recordsList");
+        if (listDiv.style.display === "none") {
+            let html = "<h3>📋 Všetky uložené dni</h3>";
+            let sorted = Object.keys(data).sort().reverse();
+            for (let key of sorted) {
+                let r = data[key];
+                let date = new Date(key + "T12:00:00");
+                let dayName = date.toLocaleDateString('sk-SK', { weekday: 'long' });
+                html += `<div class="record-item">
+                            <div class="record-date">${dayName}<br><span style="font-size:11px;">${key}</span></div>
+                            <div class="record-data">${r.start} → ${r.end} | Pauza: ${r.break}h | Čistý: ${r.net.toFixed(2)}h</div>
+                            <div class="record-actions">
+                                <button class="edit-btn" data-date="${key}">✏️ Upraviť</button>
+                                <button class="delete-btn" data-date="${key}">🗑️ Vymazať</button>
+                            </div>
+                        </div>`;
+            }
+            if (sorted.length === 0) html += "<p>Žiadne záznamy.</p>";
+            listDiv.innerHTML = html;
+            listDiv.style.display = "block";
+            document.querySelectorAll(".edit-btn").forEach(btn => {
+                btn.addEventListener("click", () => openEditModal(btn.getAttribute("data-date")));
+            });
+            document.querySelectorAll(".delete-btn").forEach(btn => {
+                btn.addEventListener("click", () => deleteRecord(btn.getAttribute("data-date")));
+            });
+        } else { listDiv.style.display = "none"; }
+    }
+    
+    function openEditModal(dateKey) {
+        let data = loadData();
+        let record = data[dateKey];
+        if (!record) return;
+        document.getElementById("editDate").value = dateKey;
+        document.getElementById("editStart").value = record.start;
+        document.getElementById("editEnd").value = record.end;
+        document.getElementById("editBreak").value = record.break;
+        document.getElementById("editModal").style.display = "flex";
+    }
+    
+    function saveEditedRecord() {
+        let dateKey = document.getElementById("editDate").value;
+        let start = document.getElementById("editStart").value;
+        let end = document.getElementById("editEnd").value;
+        let breakHours = parseFloat(document.getElementById("editBreak").value) || 0;
+        let startH = parseInt(start.split(":")[0]), startM = parseInt(start.split(":")[1]);
+        let endH = parseInt(end.split(":")[0]), endM = parseInt(end.split(":")[1]);
+        let gross = (endH + endM/60) - (startH + startM/60);
+        if (gross < 0) gross += 24;
+        let net = gross - breakHours;
+        if (net < 0) net = 0;
+        let data = loadData();
+        data[dateKey] = { start: start, end: end, break: breakHours, net: net, gross: gross };
+        saveData(data);
+        document.getElementById("editModal").style.display = "none";
+        updateTodayUI();
+        showRecordsList();
+        alert("Záznam bol upravený.");
+    }
+    
+    function deleteRecord(dateKey) {
+        if (confirm(`Naozaj chcete vymazať záznam pre ${dateKey}?`)) {
+            let data = loadData();
+            delete data[dateKey];
+            saveData(data);
+            updateTodayUI();
+            showRecordsList();
+            alert("Záznam bol vymazaný.");
+        }
+    }
+    
+    function showTydzennyReport() {
+        let data = loadData();
+        let workerName = document.getElementById("workerName").value || "_____________";
+        let today = new Date();
+        let currentDay = today.getDay();
+        let diffToMonday = (currentDay === 0 ? -6 : 1 - currentDay);
+        let monday = new Date(today);
+        monday.setDate(today.getDate() + diffToMonday);
+        let dayNames = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+        let weekDays = [];
+        for (let i = 0; i < 7; i++) {
+            let d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            weekDays.push({ key: d.toISOString().slice(0, 10), name: dayNames[i], date: d.getDate() + "." + (d.getMonth() + 1) + "." });
+        }
+        let rows = "";
+        let totalGross = 0;
+        let totalBreak = 0;
+        let totalNet = 0;
+        let rowIndex = 0;
+        
+        for (let day of weekDays) {
+            let record = data[day.key];
+            let rowClass = (rowIndex % 2 === 0) ? "" : " style='background:#f5f5f5;'";
+            if (record) {
+                rows += `<tr${rowClass}>
+                            <td style="border:1px solid black;padding:8px;">${day.name}<br><span style="font-size:10px;">${day.date}</span></td>
+                            <td style="border:1px solid black;padding:8px;">${record.start}</td>
+                            <td style="border:1px solid black;padding:8px;">${record.end}</td>
+                            <td style="border:1px solid black;padding:8px;">${record.gross.toFixed(2)} h</td>
+                            <td style="border:1px solid black;padding:8px;">${record.break.toFixed(2)} h</td>
+                            <td style="border:1px solid black;padding:8px;"><b>${record.net.toFixed(2)} h</b></td>
+                         </tr>`;
+                totalGross += record.gross;
+                totalBreak += record.break;
+                totalNet += record.net;
+            } else {
+                rows += `<tr${rowClass}>
+                            <td style="border:1px solid black;padding:8px;">${day.name}<br><span style="font-size:10px;">${day.date}</span></td>
+                            <td style="border:1px solid black;padding:8px;">—</td>
+                            <td style="border:1px solid black;padding:8px;">—</td>
+                            <td style="border:1px solid black;padding:8px;">—</td>
+                            <td style="border:1px solid black;padding:8px;">—</td>
+                            <td style="border:1px solid black;padding:8px;">—</td>
+                         </tr>`;
+            }
+            rowIndex++;
+        }
+        
+        rows += `<tr style="background:#e0e0e0; font-weight:bold;">
+                    <td style="border:1px solid black;padding:8px;"><b>GESAMT</b></td>
+                    <td style="border:1px solid black;padding:8px;"></td>
+                    <td style="border:1px solid black;padding:8px;"></td>
+                    <td style="border:1px solid black;padding:8px;"><b>${totalGross.toFixed(2)} h</b></td>
+                    <td style="border:1px solid black;padding:8px;"><b>${totalBreak.toFixed(2)} h</b></td>
+                    <td style="border:1px solid black;padding:8px;"><b>${totalNet.toFixed(2)} h</b></td>
+                 </tr>`;
+        
+        let weekNumber = getWeekNumber();
+        let reportHtml = `<div class="print-report">
+            <div class="header">
+                <div><b>ROBERT ZILKA</b> | KLINEC II. 66219 | 029 43 ZUBROHLAVA</div>
+                <div class="title">ZEITNACHWEIS</div>
+                <div class="subtitle"><b>Zeitnachweis KW ${weekNumber}</b></div>
+                <div><b>Name des Mitarbeiters: ${workerName}</b></div>
+                <div><b>Kunde: TRANSNOVA RUF</b></div>
+                <div>Anschrift: RUDOLF-DIESEL 12 | PLZ, Ort: 915 22</div>
+                <hr>
+            </div>
+            <table style="width:100%; border-collapse:collapse; border:1px solid black;">
+                <thead>
+                    <tr style="background:#e0e0e0;">
+                        <th style="border:1px solid black;padding:8px;">Datum / Tag</th>
+                        <th style="border:1px solid black;padding:8px;">Beginn</th>
+                        <th style="border:1px solid black;padding:8px;">Ende</th>
+                        <th style="border:1px solid black;padding:8px;">Brutto</th>
+                        <th style="border:1px solid black;padding:8px;">Pause</th>
+                        <th style="border:1px solid black;padding:8px;">Netto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+            <div style="margin-top:30px;">
+                <div>Datum: ${today.toLocaleDateString('de-DE')}</div>
+                <div style="margin-top:40px; display:flex; justify-content:space-between;">
+                    <div>_________________________<br>Unterschrift Auftraggeber</div>
+                    <div>_________________________<br>Unterschrift Auftragnehmer</div>
+                </div>
+                <div style="margin-top:20px; font-size:10px;">*Die Richtigkeit der Angaben wird hiermit durch eine unterschriftsberechtigte Person bestätigt.</div>
+            </div>
+        </div>`;
+        
+        document.getElementById("reportDisplay").innerHTML = reportHtml;
+        alert("Report vygenerovaný.");
+    }
+    
+    function showPrintPreview() {
+        let printContent = document.getElementById("reportDisplay").innerHTML;
+        if (!printContent) { alert("Najprv vygenerujte report."); return; }
+        let win = window.open('', '_blank');
+        win.document.write('<html><head><title>Zeitnachweis</title><style>body{font-family:"Courier New",monospace;padding:20px;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid black;padding:8px;text-align:center;}</style></head><body>' + printContent + '</body></html>');
+        win.document.close(); win.print();
+    }
+    
+    document.getElementById("displayStart").addEventListener("click", () => { document.getElementById("manualStart").style.display = "flex"; document.getElementById("displayStart").style.display = "none"; });
+    document.getElementById("displayEnd").addEventListener("click", () => { document.getElementById("manualEnd").style.display = "flex"; document.getElementById("displayEnd").style.display = "none"; });
+    document.getElementById("manualStart").addEventListener("change", (e) => { document.getElementById("displayStart").innerText = e.target.value; document.getElementById("displayStart").style.display = "flex"; document.getElementById("manualStart").style.display = "none"; });
+    document.getElementById("manualEnd").addEventListener("change", (e) => { document.getElementById("displayEnd").innerText = e.target.value; document.getElementById("displayEnd").style.display = "flex"; document.getElementById("manualEnd").style.display = "none"; });
+    document.getElementById("standardBtn1").onclick = saveStandard1;
+    document.getElementById("standardBtn2").onclick = saveStandard2;
+    document.getElementById("standardBtn3").onclick = saveStandard3;
+    document.getElementById("standardBtn4").onclick = saveStandard4;
+    document.getElementById("manualSaveBtn").onclick = saveManual;
+    document.getElementById("fillWeekBtn").onclick = openWeekModal;
+    document.getElementById("showRecordsBtn").onclick = showRecordsList;
+    document.getElementById("reportBtn").onclick = showTydzennyReport;
+    document.getElementById("printBtn").onclick = showPrintPreview;
+    document.getElementById("saveEditBtn").onclick = saveEditedRecord;
+    document.getElementById("closeModalBtn").onclick = () => document.getElementById("editModal").style.display = "none";
+    document.getElementById("saveAllWeekBtn").onclick = saveAllWeek;
+    document.getElementById("closeWeekModalBtn").onclick = () => document.getElementById("weekModal").style.display = "none";
+    window.onclick = (e) => { if (e.target === document.getElementById("editModal")) document.getElementById("editModal").style.display = "none"; if (e.target === document.getElementById("weekModal")) document.getElementById("weekModal").style.display = "none"; };
+    
+    window.setDayPreset = setDayPreset;
+    window.saveDayFromWeek = saveDayFromWeek;
+</script>
+</body>
+</html>
